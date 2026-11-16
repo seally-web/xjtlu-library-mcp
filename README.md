@@ -19,7 +19,9 @@
 | `open_fulltext` | 经学校 elink 代理探一篇全文能否拿到（不下载） |
 | `download_pdf` | 按需下载单篇 PDF（自动尝试出版社直链） |
 | `save_library_cookie` | 校外使用时写入登录态（只存本机） |
-| `save_exam_session` | 写入试卷库 etd.xjtlu.edu.cn 的登录态（cookie + token，只存本机） |
+| `browser_login` | 开窗口让你登录，自动抓 token + cookie（**不用复制粘贴**） |
+| `browser_login_status` | 看 Chrome 在不在、调试端口通不通、会话还有效吗 |
+| `save_exam_session` | 手动写入试卷库登录态（cookie + token，只存本机） |
 | `exam_databases` | 列出试卷库 / FYP / 授课型论文 / 研究型论文四个库 |
 | `exam_search` | 按课程代码、标题、学年检索往年试卷（如 `MTH002`、`ACC309`） |
 | `exam_detail` | 一条记录的完整信息：学年、学期、院系、保密截止日、有无取件权限 |
@@ -122,6 +124,20 @@ https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json
 |---|---|
 | 缺 `XJTLU_UserInfo` cookie | `403`，body 是字符串 `"非法请求"` |
 | 缺 `Authorization: bearer` token | `401`，前端跳 `sso.xjtlu.edu.cn` 重新登录 |
+
+拿法有三个，按省心程度排：
+
+**① 让插件自己开窗口（推荐，零复制）**
+
+```
+browser_login()          # 弹一个 Chrome 窗口，你在里面登录
+```
+
+窗口用的是独立 profile（`~/.xjtlu-library-mcp/state/chrome-profile`），不碰你日常浏览器；登录成功后插件通过 Chrome DevTools Protocol 读 `localStorage.token` 和 `XJTLU_UserInfo`，存好并关窗。因为 profile 会保留，下次多半免登录就能抓到。超时了窗口不关，登完再调一次会复用同一个窗口。
+
+> 为什么不塞 Playwright：那要多下 100+ MB 浏览器，而 CDP 是 Chrome 自带能力，只多一个几 KB 的 websocket 客户端。为什么不抓密码：插件完全不碰登录表单。
+
+**② 手动粘（备用）**
 
 拿法（浏览器已登录的状态下）：
 

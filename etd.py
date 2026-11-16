@@ -70,6 +70,24 @@ def load_session() -> dict:
     return {}
 
 
+def session_status() -> dict:
+    """看一眼当前存的试卷库会话是否还有效（会真发一次请求）。"""
+    data = load_session()
+    if not data:
+        return {"saved": False, "hint": "还没登录过：用 browser_login 开窗口登录，或 save_exam_session 手动粘"}
+    names = sorted((data.get("cookie") or {}).keys())
+    try:
+        probe = exam_search("MTH", limit=1)
+        alive = bool(probe.get("ok"))
+    except NotLoggedIn:
+        alive = False
+    except Exception as exc:
+        return {"saved": True, "alive": None, "error": str(exc)[:200],
+                "cookie_names": names, "user_id": data.get("user_id")}
+    return {"saved": True, "alive": alive, "cookie_names": names,
+            "user_id": data.get("user_id"), "file": str(ETD_SESSION_FILE)}
+
+
 def save_session(cookie_header: str, token: str, user_id: str = "") -> dict:
     """保存并立即验证一次；验证不过不落盘。"""
     cookie_header = (cookie_header or "").strip()

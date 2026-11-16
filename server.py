@@ -139,6 +139,30 @@ def save_exam_session(cookie_string: str, token: str, user_id: str = "") -> dict
 
 
 @mcp.tool()
+def browser_login(timeout_seconds: int = 240) -> dict:
+    """开一个 Chrome 窗口让你登录，登录完成后自动把 token 和 cookie 抓进来存好。
+
+    不用复制粘贴任何东西：窗口里是真实的 etd.xjtlu.edu.cn 登录页，你自己输账号密码
+    （插件不碰密码），登录成功后它读同一次登录产生的 localStorage.token 与
+    XJTLU_UserInfo cookie，写进 ~/.xjtlu-library-mcp/state/etd.json，然后把窗口关掉。
+
+    用的是独立 profile（~/.xjtlu-library-mcp/state/chrome-profile），不碰你日常浏览器的
+    登录状态；但因为 profile 会被保留，下次多半能免登录直接抓到。
+
+    超时后窗口不会关——在里面把登录做完，再调一次本工具即可（会复用同一个窗口）。
+    """
+    import login_browser
+    return login_browser.login(timeout_seconds=timeout_seconds)
+
+
+@mcp.tool()
+def browser_login_status() -> dict:
+    """看登录环境：Chrome 在哪、调试端口通不通、etd 会话还有效吗。不弹窗。"""
+    import login_browser
+    return login_browser.status()
+
+
+@mcp.tool()
 def exam_databases() -> dict:
     """列出 etd.xjtlu.edu.cn 上的库：试卷库 EXAMXJTLU、FYP ETDXJTLU、
     授课型硕士论文 ETDXJTLU1、研究型学位论文 ETDXJTLU2。"""
