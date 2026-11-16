@@ -112,6 +112,8 @@ https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json
 1. 改 `bundle/package.json` 的 `version`，并把 `bundle/cordis.patch.yml` 里 `uvx --from` 的 `@vX.Y.Z` 改成同一个 tag
 2. 提交 → `git tag -a vX.Y.Z -m ...` → 推送 main 和 tag
 3. `SOURCE=git python3 market/build_index.py` 把索引钉到该 commit → 提交推送
+4. 刷新 CDN 缓存（不然 jsDelivr 会继续发旧的索引，最长可能几小时）：
+   `curl https://purge.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json`
 
 `@tag` 是必须的：`uvx --from git+…` 不带 ref 时会缓存已构建的工具环境，改了代码不生效。
 
