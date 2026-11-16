@@ -94,8 +94,8 @@ uvx --from git+https://github.com/seally-web/xjtlu-library-mcp xjtlu-library-mcp
 https://raw.githubusercontent.com/seally-web/xjtlu-library-mcp/main/market/index.json
 ```
 
-> 备选（raw 超时的网络环境）：`https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json`
-> 但 jsDelivr 的 `@main` 缓存**滞后且不稳定**（实测发版后长时间仍返回旧版本，purge 多次也不一定生效），raw 是仓库直出、推上去立刻生效，所以首选 raw。
+> 备选（raw 超时的网络环境）：`https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-v0.1.6/market/index.json`
+> 注意必须钉到**不可变 ref**（tag 或 commit），不要用 `@main`：jsDelivr 的 `@main` 缓存滞后且不稳定（实测发版后长时间仍返回 0.1.0，purge 多次也不生效）；按 tag 首次拉取即为该版本，之后不会漂。每次发版后补打一个 `index-vX.Y.Z` tag 即可（本仓库已有 `index-v0.1.6`）。
 > DSH 拉索引时**拒绝重定向**，因此不能用 `github.com/…/raw/…` 那种会 302 的地址；`raw.githubusercontent.com` 是直接 200，可以。
 
 然后搜「XJTLU 图书馆」安装。插件包见 [`bundle/`](bundle/)，它只做一件事：把本服务注册成一个名为 `xjtlu-library` 的 stdio MCP 连接。
