@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """生成 DSH 插件市场索引 market/index.json。
 
-索引指向本仓库里的 bundle/ 目录（git source，pinned 到某个 commit），
-所以发布顺序是：改版本 → commit → push → 运行本脚本 → commit 索引 → push。
-
-用法：python3 market/build_index.py
+默认把版本指向 npm 上的 dsh-xjtlu-library@<version>；设置 SOURCE=git 则改为钉本仓库
+某个 commit 的 bundle/ 子目录。发布顺序：改 bundle/package.json 的 version →
+npm publish（在 bundle/ 里）→ python3 market/build_index.py → commit 索引 → push。
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BUNDLE = ROOT / "bundle"
 REPO_URL = "https://github.com/seally-web/xjtlu-library-mcp"
+SOURCE = os.environ.get("SOURCE", "npm").strip().lower()
 
 
 def git(*args: str) -> str:
@@ -28,6 +29,11 @@ def main() -> None:
     commit = git("rev-parse", "HEAD")
     # 用引入当前版本的提交时间做发布时间戳；索引与版本一一对应时它就是发布时刻
     publish_ts = int(git("log", "-1", "--format=%ct"))
+    source = (
+        {"type": "git", "url": REPO_URL, "commit": commit, "path": "bundle"}
+        if SOURCE == "git"
+        else {"type": "npm"}
+    )
 
     index = {
         "format": 1,
@@ -68,7 +74,7 @@ def main() -> None:
                     {
                         "version": version,
                         "publishTimestamp": publish_ts,
-                        "source": {"type": "git", "url": REPO_URL, "commit": commit, "path": "bundle"},
+                        "source": source,
                     }
                 ],
             }

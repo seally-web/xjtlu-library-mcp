@@ -17,3 +17,5 @@ dist/
 
 # 临时验证目录
 .scratch/
+# npm 临时缓存（沙箱内需要可写目录）
+.npmtmp/
