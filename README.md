@@ -91,10 +91,12 @@ uvx --from git+https://github.com/seally-web/xjtlu-library-mcp xjtlu-library-mcp
 **设置 → 插件 → 实验性插件 → 打开「自定义插件索引」**，在 **Discover** 里添加索引地址：
 
 ```
-https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json
+https://raw.githubusercontent.com/seally-web/xjtlu-library-mcp/main/market/index.json
 ```
 
-> 国内网络访问 `raw.githubusercontent.com` 经常超时（实测直接连不上），而 DSH 拉索引时**拒绝重定向**，所以别用 `github.com/…/raw/…` 那种会 302 的地址。jsDelivr 实测 200/1.8s。
+> 备选（raw 超时的网络环境）：`https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json`
+> 但 jsDelivr 的 `@main` 缓存**滞后且不稳定**（实测发版后长时间仍返回旧版本，purge 多次也不一定生效），raw 是仓库直出、推上去立刻生效，所以首选 raw。
+> DSH 拉索引时**拒绝重定向**，因此不能用 `github.com/…/raw/…` 那种会 302 的地址；`raw.githubusercontent.com` 是直接 200，可以。
 
 然后搜「XJTLU 图书馆」安装。插件包见 [`bundle/`](bundle/)，它只做一件事：把本服务注册成一个名为 `xjtlu-library` 的 stdio MCP 连接。
 
@@ -176,8 +178,7 @@ save_exam_session(cookie_string="XJTLU_UserInfo=nGUb...", token="O5mG...", user_
 1. 改 `bundle/package.json` 的 `version`，并把 `bundle/cordis.patch.yml` 里 `uvx --from` 的 `@vX.Y.Z` 改成同一个 tag
 2. 提交 → `git tag -a vX.Y.Z -m ...` → 推送 main 和 tag
 3. `SOURCE=git python3 market/build_index.py` 把索引钉到该 commit → 提交推送
-4. 刷新 CDN 缓存（不然 jsDelivr 会继续发旧的索引，最长可能几小时）：
-   `curl https://purge.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json`
+4. 用 raw 地址的话到这一步就生效了；如果你用的是 jsDelivr 地址，还要 `curl https://purge.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json`（实测常需多刷几次、且可能长时间不生效，这就是首选 raw 的原因）
 
 `@tag` 是必须的：`uvx --from git+…` 不带 ref 时会缓存已构建的工具环境，改了代码不生效。
 
