@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xjtlu-library-mcp"
-version = "0.1.0"
+version = "0.1.8"
 description = "MCP server for XJTLU library: catalogue search, article discovery, and full-text access via the school proxy"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,4 +23,4 @@ dependencies = [
 xjtlu-library-mcp = "server:main"
 
 [tool.setuptools]
-py-modules = ["xjtlu", "etd", "login_browser", "server"]
+py-modules = ["xjtlu", "etd", "login_browser", "browser_fetch", "server"]

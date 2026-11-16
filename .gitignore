@@ -13,7 +13,8 @@ downloads/*
 .vscode/
 *.egg-info/
 build/
-dist/
+dist/*
+!dist/*.whl
 
 # 临时验证目录
 .scratch/
