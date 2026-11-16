@@ -165,6 +165,11 @@ def _json(r: requests.Response):
     try:
         data = r.json()
     except ValueError:
+        head = (r.text or "")[:400].lstrip().lower()
+        if head.startswith("<!doctype") or head.startswith("<html"):
+            raise NotLoggedIn(
+                "接口返回的是登录页 HTML —— 会话过期了（这个站的 token 撑不了太久）。"
+                "用 browser_login 重新登录一次即可。")
         raise NotLoggedIn(f"非 JSON 响应（HTTP {r.status_code}）：{(r.text or '')[:200]}")
     if isinstance(data, str):
         text = data[:300]
@@ -243,16 +248,9 @@ def exam_search(query: str = "", field: str = "PaperCode", page: int = 1,
     _guard(r)
     if r.status_code != 200:
         return {"ok": False, "reason": "http_error", "status": r.status_code, "body": (r.text or "")[:300]}
-    try:
-        d = r.json()
-    except ValueError:
-        return {"ok": False, "reason": "bad_json", "body": (r.text or "")[:300]}
+    d = _json(r)          # 会话过期时这里会抛 NotLoggedIn（登录页 HTML / "非法请求"）
     if not isinstance(d, dict):
-        # 这个站有时回纯字符串（"非法请求" / 未登录），别让 .get 崩掉整条链路
-        text = str(d)[:300]
-        if "非法" in text or "登录" in text:
-            raise NotLoggedIn(f"服务端拒绝：{text}")
-        return {"ok": False, "reason": "unexpected_response", "body": text}
+        return {"ok": False, "reason": "unexpected_response", "body": str(d)[:300]}
 
     rows = ((d.get("result") or {}).get("overviewResult") or [])
     items = []

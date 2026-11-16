@@ -7,7 +7,7 @@
         command: uvx
         args:
           - --from
-          - git+https://github.com/seally-web/xjtlu-library-mcp@v0.1.5
+          - git+https://github.com/seally-web/xjtlu-library-mcp@v0.1.6
           - xjtlu-library-mcp
         # 第三方集成：uv 缺失时只让这条连接失败，不要拦下整个 Harness 启动
         failOnStartupError: false
