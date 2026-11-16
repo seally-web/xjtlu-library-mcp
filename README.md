@@ -119,6 +119,27 @@ https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-v0.1.7/market/ind
 
 > ⚠️ 只从 `lib.xjtlu.edu.cn` 首页抓到的 Cookie 是**百度统计 + Google Analytics**，不含任何身份信息，存了也没用。真正的会话在 `elink.xjtlu.edu.cn`。
 
+## 启动卡住？（v0.1.8 修掉的坑）
+
+**症状**：桌面端双击没反应 / 一直停在 `Loading plugins…`，但进程在、窗口不显示。
+
+**原因**：这个 bundle 会插入一条 MCP 连接，命令是 `uvx --from <源> xjtlu-library-mcp`。早期用 `git+https://…@v0.1.x`，冷缓存下 uvx 要 clone 仓库 + 建构建环境，实测 **142 秒**；而 MCP 客户端默认没有启动超时（`startupTimeoutMs === undefined` 时 `remaining()` 返回 undefined，连接无限期等待），于是整个启动被吊死。
+
+**现在**：
+
+| 改动 | 效果 |
+|---|---|
+| `--from` 换成预构建 wheel（30KB 单文件） | 冷启动 **11 秒**（含装 37 个依赖） |
+| `startupTimeoutMs: 30000` | 即使 uvx 抽风，30 秒后放弃该连接，启动继续 |
+| `failOnStartupError: false` | 失败只影响这个插件，不拦 Harness |
+
+**万一还是卡住**，编辑 `~/.dsh/profiles/desktop/cordis.patch.yml`，给这条连接加：
+
+```yaml
+- id: xjtlu-library
+  disabled: true
+```
+
 ## 试卷库（etd.xjtlu.edu.cn）
 
 同一个站上挂着四个库：`EXAMXJTLU` 往年试卷、`ETDXJTLU` 本科 FYP、`ETDXJTLU1` 授课型硕士论文、`ETDXJTLU2` 研究型学位论文。
@@ -187,8 +208,10 @@ save_exam_session(cookie_string="XJTLU_UserInfo=nGUb...", token="O5mG...", user_
 1. 改 `bundle/package.json` 的 `version`，并把 `bundle/cordis.patch.yml` 里 `uvx --from` 的 `@vX.Y.Z` 改成同一个 tag
 2. 提交 → `git tag -a vX.Y.Z -m ...` → 推送 main 和 tag
 3. `SOURCE=git python3 market/build_index.py` 把索引钉到该 commit → 提交推送
-4. 打索引 tag 并推送（索引地址靠它固定在某个版本上）：`git tag -a index-vX.Y.Z -m ...` → `git push origin index-vX.Y.Z`
-5. 新的索引地址是 `https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-vX.Y.Z/market/index.json`（把原地址里的版本号换掉）
+4. 同步打通 PyPI 之外的第二条分发路径——**预构建 wheel**（bundle 就是靠它启动的）：
+   `./.venv/bin/python -m pip wheel . --no-deps -w dist` → 把 `dist/xjtlu_library_mcp-X.Y.Z-py3-none-any.whl` 一起提交
+5. 打索引 tag 并推送（索引地址靠它固定在某个版本上）：`git tag -a index-vX.Y.Z -m ...` → `git push origin index-vX.Y.Z`
+6. 新的索引地址是 `https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-vX.Y.Z/market/index.json`（把原地址里的版本号换掉）；bundle 里 wheel 的 `@vX.Y.Z` 也要一起改
 
 `@tag` 是必须的：`uvx --from git+…` 不带 ref 时会缓存已构建的工具环境，改了代码不生效。
 
