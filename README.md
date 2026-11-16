@@ -18,6 +18,7 @@
 | `search_articles` | 检索期刊 / 会议论文，返回 DOI、期刊、年份、被引数、OA 直链 |
 | `open_fulltext` | 经学校 elink 代理探一篇全文能否拿到（不下载） |
 | `download_pdf` | 按需下载单篇 PDF（自动尝试出版社直链） |
+| `browser_download` | 反爬站点（Wiley / T&F / OUP / Euclid）的 PDF：用真浏览器取回 |
 | `save_library_cookie` | 校外使用时写入登录态（只存本机） |
 | `browser_login` | 开窗口让你登录，自动抓 token + cookie（**不用复制粘贴**） |
 | `browser_login_status` | 看 Chrome 在不在、调试端口通不通、会话还有效吗 |
@@ -163,9 +164,15 @@ save_exam_session(cookie_string="XJTLU_UserInfo=nGUb...", token="O5mG...", user_
 - **只做单篇、按需**。不提供批量抓取，请遵守学校与出版社的订阅协议。
 - **不绕过鉴权**。不代填密码、不处理 MFA；cookie 由你自己提供、只存本机 `~/.xjtlu-library-mcp/state/`（可用 `XJTLU_LIBRARY_HOME` 改路径）。
 - **下载分三档**，别期待一键全下：
-  - ✅ 开放获取（arXiv / PMC / MDPI）直链可用
-  - ✅ Springer 系（`10.1007` / `10.2991` / `10.1186` / `10.1057`）走直链模板
-  - ⚠️ Wiley / Taylor & Francis / Project Euclid / ScienceDirect 有反爬风控，脚本会拿到 403 或 JS 挑战页，需用浏览器打开
+  - ✅ 开放获取（arXiv / PMC / MDPI）直链可用 → `download_pdf`
+  - ✅ Springer 系（`10.1007` / `10.2991` / `10.1186` / `10.1057`）走直链模板 → `download_pdf`
+  - ⚠️ Wiley / Taylor & Francis / Oxford Academic / Project Euclid / ScienceDirect 有反爬风控，
+    `requests` 拿到的是 403 或 JS 挑战页 —— 改用 `browser_download`
+
+  `browser_download` 不复用任何"黑科技"：它开的就是 `browser_login` 那个 Chrome，
+  等页面加载完，读各出版社通用的 `<meta name="citation_pdf_url">` 标签（没有就找页面里的
+  `.pdf` 链接），再在**页面自己的上下文**里 `fetch(..., {credentials:'include'})` 把字节取回来。
+  对网站来说这就是你自己点了一下下载。所以要求只有一个：**在那个 Chrome 窗口里你确实能看这篇全文**。
 - **元数据来源**：文章检索主用 [OpenAlex](https://openalex.org)，不可用时自动回落 [Crossref](https://crossref.org)。两者都无需登录，也不碰 EBSCO 的私有前端接口——那接口无文档、随改版失效。
 - **馆藏接口**只允许校内 IP，所以本工具对校外同学的价值取决于你有无 VPN。
 

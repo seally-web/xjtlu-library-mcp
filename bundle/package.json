@@ -1,6 +1,6 @@
 {
   "name": "dsh-xjtlu-library",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "type": "module",
   "description": "XJTLU 图书馆连接器：让 agent 检索馆藏与论文、经学校代理判断订阅并取全文。",
   "exports": {

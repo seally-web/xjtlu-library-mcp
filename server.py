@@ -9,6 +9,7 @@ import json
 
 from mcp.server.fastmcp import FastMCP
 
+import browser_fetch
 import etd
 import xjtlu
 
@@ -208,6 +209,20 @@ def exam_download(record_id: int, filename: str = "", db_code: str = "EXAMXJTLU"
         return etd.exam_download(record_id, filename=filename, db_code=db_code)
     except etd.NotLoggedIn as exc:
         return {"ok": False, "reason": "login_required", "detail": str(exc)}
+
+
+@mcp.tool()
+def browser_download(url: str, filename: str = "") -> dict:
+    """下载那些普通 HTTP 抓不动的 PDF（Wiley / Taylor & Francis / Oxford Academic /
+    Project Euclid / ScienceDirect 这类有反爬风控的站）。
+
+    做法：复用 browser_login 的那个 Chrome —— 打开文献落地页，读标准标签
+    <meta name="citation_pdf_url">（没有就找页面里的 .pdf 链接），再在页面自己的
+    上下文里 fetch 回来。等价于你在那个页面上点一下"下载"，只是不用你手动点。
+
+    需要登录态的先跑 browser_login。url 可以是文章页、doi.org 链接或 elink 代理链接。
+    """
+    return browser_fetch.fetch_pdf(url, xjtlu.DOWNLOAD_DIR, filename=filename)
 
 
 def main() -> None:
