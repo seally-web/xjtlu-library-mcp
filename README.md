@@ -69,8 +69,10 @@ uvx --from git+https://github.com/seally-web/xjtlu-library-mcp xjtlu-library-mcp
 **设置 → 插件 → 实验性插件 → 打开「自定义插件索引」**，在 **Discover** 里添加索引地址：
 
 ```
-https://raw.githubusercontent.com/seally-web/xjtlu-library-mcp/main/market/index.json
+https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json
 ```
+
+> 国内网络访问 `raw.githubusercontent.com` 经常超时（实测直接连不上），而 DSH 拉索引时**拒绝重定向**，所以别用 `github.com/…/raw/…` 那种会 302 的地址。jsDelivr 实测 200/1.8s。
 
 然后搜「XJTLU 图书馆」安装。插件包见 [`bundle/`](bundle/)，它只做一件事：把本服务注册成一个名为 `xjtlu-library` 的 stdio MCP 连接。
 
@@ -105,7 +107,15 @@ https://raw.githubusercontent.com/seally-web/xjtlu-library-mcp/main/market/index
 
 学校改版后大概率要动的地方都在 `xjtlu.py` 顶部常量：`OPAC_BASE`、`ELINK`、`EBSCO_CUSTOMER`。OPAC 用校内自签证书，请求必须 `verify=False`。
 
-发布新版本：改 `bundle/package.json` 的 `version` → 提交并推送 → `python3 market/build_index.py`（把索引钉到当前 commit）→ 提交推送索引。
+发布新版本（git source，推荐）：
+
+1. 改 `bundle/package.json` 的 `version`，并把 `bundle/cordis.patch.yml` 里 `uvx --from` 的 `@vX.Y.Z` 改成同一个 tag
+2. 提交 → `git tag -a vX.Y.Z -m ...` → 推送 main 和 tag
+3. `SOURCE=git python3 market/build_index.py` 把索引钉到该 commit → 提交推送
+
+`@tag` 是必须的：`uvx --from git+…` 不带 ref 时会缓存已构建的工具环境，改了代码不生效。
+
+npm 那条路（`SOURCE=npm`）也能用，但如果账号强制 2FA，`npm publish` 会走 staged publishing——先返回 `+ pkg@ver`，实际是 202 待审，要人工批准才真的发布。
 
 ## License
 
