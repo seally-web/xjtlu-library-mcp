@@ -14,7 +14,7 @@ import json
 import os
 import re
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -432,16 +432,20 @@ PDF_PATTERNS = {
 
 
 def _pdf_candidates(url: str) -> list[str]:
-    """按可信度排列的候选直链：出版社 PDF 模板 > elink 代理 DOI > 原样。"""
-    doi = None
-    m = re.search(r"(10\.\d{4,9}/[^\s?#]+)", url)
-    if m:
-        doi = m.group(1).rstrip("/")
+    """按可信度排列的候选直链：出版社 PDF 模板 > elink 代理 DOI > 原样。
+
+    已经指向 .pdf 的直链不再套模板：DOI 正则会把 `10.1007/x.pdf` 连同后缀一起吃掉，
+    再按模板拼一次就成了 `x.pdf.pdf`（实测返回空 body，落盘 0 字节）。
+    """
     out = []
-    if doi:
-        tpl = PDF_PATTERNS.get(doi.split("/")[0])
-        if tpl:
-            out.append(tpl.format(doi=doi))
+    bare = url.split("#")[0].split("?")[0]
+    if not bare.lower().endswith(".pdf"):
+        m = re.search(r"(10\.\d{4,9}/[^\s?#]+)", url)
+        if m:
+            doi = re.sub(r"\.pdf$", "", m.group(1).rstrip("/"), flags=re.I)
+            tpl = PDF_PATTERNS.get(doi.split("/")[0])
+            if tpl:
+                out.append(tpl.format(doi=doi))
     out += [elink(url), url]
     seen, uniq = set(), []
     for u in out:
@@ -464,8 +468,9 @@ def download_fulltext(url: str, filename: str | None = None) -> dict:
                           "content_type": ctype[:60], "final_url": r.url})
             r.close(); continue
         DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        name = filename or Path(quote(r.url, "")).name or "download.pdf"
-        name = re.sub(r"[^\w.\-]+", "_", name)[-120:]
+        # 文件名取最终 URL 路径的最后一段；不要对整个 URL 做百分号编码再当名字
+        raw = filename or unquote(Path(urlparse(r.url).path).name) or "download.pdf"
+        name = re.sub(r"[^\w.\-]+", "_", raw)[-120:].strip("._") or "download"
         if not name.lower().endswith(".pdf"):
             name += ".pdf"
         dest = DOWNLOAD_DIR / name
@@ -473,8 +478,13 @@ def download_fulltext(url: str, filename: str | None = None) -> dict:
             for chunk in r.iter_content(65536):
                 fh.write(chunk)
         r.close()
-        return {"ok": True, "path": str(dest), "bytes": dest.stat().st_size,
-                "via": cand}
+        size = dest.stat().st_size
+        if size == 0:  # 正确响应但空 body：删掉空文件，换下一个候选
+            dest.unlink(missing_ok=True)
+            tried.append({"url": cand, "status": r.status_code,
+                          "content_type": ctype[:60], "reason": "empty_body"})
+            continue
+        return {"ok": True, "path": str(dest), "bytes": size, "via": cand}
     return {"ok": False, "reason": "not_pdf", "tried": tried,
             "hint": "没拿到 PDF：可能是出版社风控挡住脚本（Wiley/T&F/Project Euclid 常见）、"
                     "直链需要文章页 token，或学校未订阅。用浏览器打开 elink 链接人工下载，"

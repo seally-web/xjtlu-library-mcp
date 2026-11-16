@@ -93,10 +93,11 @@ def download_pdf(doi_or_url: str, filename: str = "") -> dict:
     """下载一篇文献的 PDF 到插件目录 downloads/（仅限你有权访问的内容，单篇按需）。
 
     Args:
-        doi_or_url: DOI 或完整 URL。
-        filename: 可选文件名；留空则用 URL 末段。
+        doi_or_url: DOI、doi.org 链接、出版社 PDF 直链或任何全文落地页 URL 都行。
+        filename: 可选文件名；留空则用最终 URL 路径的末段。
 
-    若返回 not_pdf，说明该地址是登录页或 HTML 落地页，先在浏览器确认直链再重试。
+    已经以 .pdf 结尾的直链会原样使用，不会再套出版社模板；空 body 会被判为失败并换下一个候选，
+    不会留下 0 字节文件。若返回 not_pdf，说明该地址是登录页或 HTML 落地页，先在浏览器确认直链再重试。
     """
     target = doi_or_url
     if not target.startswith("http"):
