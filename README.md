@@ -92,12 +92,14 @@ uvx --from git+https://github.com/seally-web/xjtlu-library-mcp xjtlu-library-mcp
 **设置 → 插件 → 实验性插件 → 打开「自定义插件索引」**，在 **Discover** 里添加索引地址：
 
 ```
-https://raw.githubusercontent.com/seally-web/xjtlu-library-mcp/main/market/index.json
+https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-v0.1.7/market/index.json
 ```
 
-> 备选（raw 超时的网络环境）：`https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-v0.1.6/market/index.json`
-> 注意必须钉到**不可变 ref**（tag 或 commit），不要用 `@main`：jsDelivr 的 `@main` 缓存滞后且不稳定（实测发版后长时间仍返回 0.1.0，purge 多次也不生效）；按 tag 首次拉取即为该版本，之后不会漂。每次发版后补打一个 `index-vX.Y.Z` tag 即可（本仓库已有 `index-v0.1.6`）。
-> DSH 拉索引时**拒绝重定向**，因此不能用 `github.com/…/raw/…` 那种会 302 的地址；`raw.githubusercontent.com` 是直接 200，可以。
+> **为什么钉 tag 而不是 `@main`**：jsDelivr 对 `@main` 的缓存滞后且不稳定（实测发版后长时间仍返回 0.1.0，purge 多次也不生效）；对**不可变 ref**（tag / commit）则是首次拉取即为该版本，之后不会漂。
+> **为什么不用 raw**：`https://raw.githubusercontent.com/…/main/market/index.json` 仓库直出、立刻生效，但国内网络时通时断（同一小时内 200/1.2s 与 12s 超时都出现过）。
+> **不能用 `github.com/…/raw/…`**：它 302，而 DSH 拉索引时拒绝重定向。
+>
+> 每次发版补打一个 `index-vX.Y.Z` tag 即可（见「维护」）。
 
 然后搜「XJTLU 图书馆」安装。插件包见 [`bundle/`](bundle/)，它只做一件事：把本服务注册成一个名为 `xjtlu-library` 的 stdio MCP 连接。
 
@@ -185,7 +187,8 @@ save_exam_session(cookie_string="XJTLU_UserInfo=nGUb...", token="O5mG...", user_
 1. 改 `bundle/package.json` 的 `version`，并把 `bundle/cordis.patch.yml` 里 `uvx --from` 的 `@vX.Y.Z` 改成同一个 tag
 2. 提交 → `git tag -a vX.Y.Z -m ...` → 推送 main 和 tag
 3. `SOURCE=git python3 market/build_index.py` 把索引钉到该 commit → 提交推送
-4. 用 raw 地址的话到这一步就生效了；如果你用的是 jsDelivr 地址，还要 `curl https://purge.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json`（实测常需多刷几次、且可能长时间不生效，这就是首选 raw 的原因）
+4. 打索引 tag 并推送（索引地址靠它固定在某个版本上）：`git tag -a index-vX.Y.Z -m ...` → `git push origin index-vX.Y.Z`
+5. 新的索引地址是 `https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-vX.Y.Z/market/index.json`（把原地址里的版本号换掉）
 
 `@tag` 是必须的：`uvx --from git+…` 不带 ref 时会缓存已构建的工具环境，改了代码不生效。
 
