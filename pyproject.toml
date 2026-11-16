@@ -22,4 +22,4 @@ dependencies = [
 xjtlu-library-mcp = "server:main"
 
 [tool.setuptools]
-py-modules = ["xjtlu", "server"]
+py-modules = ["xjtlu", "etd", "server"]

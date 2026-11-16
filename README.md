@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-一个 MCP server，把西交利物浦大学图书馆塞进 AI agent 的工具箱：查馆藏、查论文、判断学校订没订、按需取全文。
+一个 MCP server，把西交利物浦大学图书馆塞进 AI agent 的工具箱：查馆藏、查论文、判断学校订没订、按需取全文；外加**往年试卷库 / FYP / 学位论文**的检索与下载。
 
 > 专门解决两件磨人的事：一次检索要跨三个站（elink 网关 → 发现系统 → 出版社），以及"跑一趟图书馆或翻十几个页面才能确认一本书能不能借"。
 
@@ -19,8 +19,13 @@
 | `open_fulltext` | 经学校 elink 代理探一篇全文能否拿到（不下载） |
 | `download_pdf` | 按需下载单篇 PDF（自动尝试出版社直链） |
 | `save_library_cookie` | 校外使用时写入登录态（只存本机） |
+| `save_exam_session` | 写入试卷库 etd.xjtlu.edu.cn 的登录态（cookie + token，只存本机） |
+| `exam_databases` | 列出试卷库 / FYP / 授课型论文 / 研究型论文四个库 |
+| `exam_search` | 按课程代码、标题、学年检索往年试卷（如 `MTH002`、`ACC309`） |
+| `exam_detail` | 一条记录的完整信息：学年、学期、院系、保密截止日、有无取件权限 |
+| `exam_download` | 把一份试卷 / 论文存成本地 PDF |
 
-一个真实返回：
+一个真实返回（馆藏）：
 
 ```json
 {
@@ -29,6 +34,21 @@
   "copies": 1, "available": 1,
   "author": "Jean-François Le Gall", "year": "2022", "publisher": "Springer",
   "holdings": [["QA312./L46/4/EN", "23134802", "", "SIP Floor 9", "可借"]]
+}
+```
+
+一个真实返回（试卷检索）：
+
+```json
+{
+  "db": "西交利物浦大学试卷库", "total": 456,
+  "items": [{
+    "record_id": 13933,
+    "title": "Multivariable Calculus and Statistics",
+    "code": "MTH002",
+    "department": "Department of Foundational Mathematics",
+    "year": "2023-2024"
+  }]
 }
 ```
 
@@ -91,6 +111,34 @@ https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json
 3. **粘贴 cookie**：浏览器登录 `lib.xjtlu.edu.cn` 并走一次 elink 跳转后，复制 Cookie 请求头交给 `save_library_cookie`
 
 > ⚠️ 只从 `lib.xjtlu.edu.cn` 首页抓到的 Cookie 是**百度统计 + Google Analytics**，不含任何身份信息，存了也没用。真正的会话在 `elink.xjtlu.edu.cn`。
+
+## 试卷库（etd.xjtlu.edu.cn）
+
+同一个站上挂着四个库：`EXAMXJTLU` 往年试卷、`ETDXJTLU` 本科 FYP、`ETDXJTLU1` 授课型硕士论文、`ETDXJTLU2` 研究型学位论文。
+
+它比图书馆更挑剔：**要 cookie 和 token 两件套**，缺一样就失败：
+
+| 缺什么 | 现象 |
+|---|---|
+| 缺 `XJTLU_UserInfo` cookie | `403`，body 是字符串 `"非法请求"` |
+| 缺 `Authorization: bearer` token | `401`，前端跳 `sso.xjtlu.edu.cn` 重新登录 |
+
+拿法（浏览器已登录的状态下）：
+
+```js
+localStorage.getItem('token')   // 一长串，填给 save_exam_session 的 token
+localStorage.getItem('uId')     // 数字学号，填给 user_id（可选但建议）
+```
+
+cookie 取自 Network 里任一 `/api/v1/...` 请求的 Request Headers，**只需要 `XJTLU_UserInfo=...` 这一段**——别的（`_ga`、`_clsk`、`tfstk`）都是埋点。
+
+```python
+save_exam_session(cookie_string="XJTLU_UserInfo=nGUb...", token="O5mG...", user_id="2362344")
+```
+
+有个反直觉的点：`exam_detail` 里 `hasDownloadRight` 常常是 `false`，但**依然能取到 PDF**——只要有 browse 权限，走 `BrowserUrl` 的签名路径（签名带 `timestamp`，必须现取现用，所以每次下载都会先要一次新签名）。
+
+保密期由 `security_date` 决定，没过期的记录任何人都下不了，工具会明确返回 `no_permission` 而不是含糊的失败。
 
 ## 能力边界（重要）
 

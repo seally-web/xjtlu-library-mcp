@@ -9,6 +9,7 @@ import json
 
 from mcp.server.fastmcp import FastMCP
 
+import etd
 import xjtlu
 
 mcp = FastMCP("xjtlu-library")
@@ -119,6 +120,70 @@ def save_library_cookie(cookie_string: str) -> dict:
         "file": str(xjtlu.COOKIE_FILE),
         "hint": "若仍 302 到登录页，说明该 cookie 不含 elink/SSO 会话，请在 elink 登录后再复制",
     }
+
+
+@mcp.tool()
+def save_exam_session(cookie_string: str, token: str, user_id: str = "") -> dict:
+    """保存试卷库 etd.xjtlu.edu.cn 的登录态（搜索和下载都要它，缺一不可）。
+
+    要两样东西，都来自同一次浏览器登录：
+      1) token —— 控制台执行 localStorage.getItem('token')
+      2) cookie —— 形如 XJTLU_UserInfo=nGUb...（Network 里任一 api 请求的 Cookie 头，
+         只取 XJTLU_UserInfo 这一段即可）
+    可选 user_id = localStorage.getItem('uId')，部分接口会用到。
+
+    只保存在本机的 ~/.xjtlu-library-mcp/state/etd.json（权限 600），会上传吗？不会。
+    保存时会立刻验证一次，无效则不落盘。
+    """
+    return etd.save_session(cookie_string, token, user_id)
+
+
+@mcp.tool()
+def exam_databases() -> dict:
+    """列出 etd.xjtlu.edu.cn 上的库：试卷库 EXAMXJTLU、FYP ETDXJTLU、
+    授课型硕士论文 ETDXJTLU1、研究型学位论文 ETDXJTLU2。"""
+    return etd.db_list()
+
+
+@mcp.tool()
+def exam_search(query: str = "", field: str = "PaperCode", page: int = 1,
+                limit: int = 20, db_code: str = "EXAMXJTLU", exact: bool = False) -> dict:
+    """检索往年试卷 / FYP / 学位论文（需要先 save_exam_session）。
+
+    field 取值（试卷库）：PaperCode（课程代码，如 MTH002、ACC309）、PaperTitle、Year。
+    exact=True 为精确匹配，默认包含匹配。返回 record_id，交给 exam_detail / exam_download。
+    一次 20 条，分页用 page。
+    """
+    try:
+        return etd.exam_search(query, field=field, page=page, limit=limit,
+                               db_code=db_code, exact=exact)
+    except etd.NotLoggedIn as exc:
+        return {"ok": False, "reason": "login_required", "detail": str(exc),
+                "hint": "先 save_exam_session(cookie_string, token, user_id)"}
+
+
+@mcp.tool()
+def exam_detail(record_id: int, db_code: str = "EXAMXJTLU") -> dict:
+    """看一条试卷/论文的完整信息：标题、课程码、学年、学期、院系、保密截止日，
+    以及 can_browse / can_download（决定能否取到 PDF）。"""
+    try:
+        return etd.exam_detail(record_id, db_code=db_code)
+    except etd.NotLoggedIn as exc:
+        return {"ok": False, "reason": "login_required", "detail": str(exc)}
+
+
+@mcp.tool()
+def exam_download(record_id: int, filename: str = "", db_code: str = "EXAMXJTLU") -> dict:
+    """把一份往年试卷 / FYP / 学位论文存成本地 PDF，落在 ~/.xjtlu-library-mcp/downloads/。
+
+    权限说明：只要能浏览（hasBrowserRight）就能取到，走 BrowserUrl 的签名路径；
+    hasDownloadRight 是另一回事，用于直链，不影响这里。若返回 no_permission，
+    表示这份记录在保密期内（看 security_date）或你的账号未被授权。
+    """
+    try:
+        return etd.exam_download(record_id, filename=filename, db_code=db_code)
+    except etd.NotLoggedIn as exc:
+        return {"ok": False, "reason": "login_required", "detail": str(exc)}
 
 
 def main() -> None:
