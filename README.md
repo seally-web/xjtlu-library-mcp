@@ -80,7 +80,7 @@ https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@main/market/index.json
 
 新建 MCP 连接，`command` 指向 venv 里的 python，`args: ["server.py"]`，`cwd` 指向本仓库。
 
-> 两种方式都需要本机有 `uv`（插件索引走 `uvx`），且首次启动要能访问 GitHub 拉取代码。
+> 方式一（插件索引）需要本机有 `uv`，并需要首次启动时能访问 GitHub 拉取代码；方式二只依赖上面建好的 venv，不需要 `uv`。
 
 ## 校外怎么用
 
