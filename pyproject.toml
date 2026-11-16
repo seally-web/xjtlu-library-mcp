@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xjtlu-library-mcp"
+version = "0.1.0"
+description = "MCP server for XJTLU library: catalogue search, article discovery, and full-text access via the school proxy"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "seally-web" }]
+keywords = ["mcp", "library", "xjtlu", "opac", "crossref", "openalex"]
+dependencies = [
+  "mcp>=1.10,<2",
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "lxml>=5.0",
+]
+
+[project.scripts]
+xjtlu-library-mcp = "server:main"
+
+[tool.setuptools]
+py-modules = ["xjtlu", "server"]

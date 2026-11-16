@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# 运行时产物：登录态与下载的文献，绝不入库
+state/
+downloads/*
+!downloads/.gitkeep
+
+# 编辑器
+.idea/
+.vscode/
+*.egg-info/
+build/
+dist/

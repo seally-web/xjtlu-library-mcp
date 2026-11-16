@@ -1,0 +1,5 @@
+# mcp 2.x 把 FastMCP 改名为 MCPServer（mcp.server.mcpserver），本插件按 1.x API 编写
+mcp>=1.10,<2
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=5.0
