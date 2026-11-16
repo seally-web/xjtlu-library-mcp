@@ -56,7 +56,29 @@ python3 -m venv .venv
 }
 ```
 
-在 DeepSeek Harness 里则用连接器配置：`command` 指向 venv 里的 python，`args: ["server.py"]`，`cwd` 指向本仓库。
+不想手动建虚拟环境的话，装了 [uv](https://docs.astral.sh/uv/) 之后一条命令即可：
+
+```bash
+uvx --from git+https://github.com/seally-web/xjtlu-library-mcp xjtlu-library-mcp
+```
+
+## 装到 DeepSeek Harness
+
+**方式一：插件索引（推荐）**
+
+**设置 → 插件 → 实验性插件 → 打开「自定义插件索引」**，在 **Discover** 里添加索引地址：
+
+```
+https://raw.githubusercontent.com/seally-web/xjtlu-library-mcp/main/market/index.json
+```
+
+然后搜「XJTLU 图书馆」安装。插件包见 [`bundle/`](bundle/)，它只做一件事：把本服务注册成一个名为 `xjtlu-library` 的 stdio MCP 连接。
+
+**方式二：手动连接器**
+
+新建 MCP 连接，`command` 指向 venv 里的 python，`args: ["server.py"]`，`cwd` 指向本仓库。
+
+> 两种方式都需要本机有 `uv`（插件索引走 `uvx`），且首次启动要能访问 GitHub 拉取代码。
 
 ## 校外怎么用
 
@@ -71,7 +93,7 @@ python3 -m venv .venv
 ## 能力边界（重要）
 
 - **只做单篇、按需**。不提供批量抓取，请遵守学校与出版社的订阅协议。
-- **不绕过鉴权**。不代填密码、不处理 MFA；cookie 由你自己提供、只存本机 `state/`（已列入 `.gitignore`）。
+- **不绕过鉴权**。不代填密码、不处理 MFA；cookie 由你自己提供、只存本机 `~/.xjtlu-library-mcp/state/`（可用 `XJTLU_LIBRARY_HOME` 改路径）。
 - **下载分三档**，别期待一键全下：
   - ✅ 开放获取（arXiv / PMC / MDPI）直链可用
   - ✅ Springer 系（`10.1007` / `10.2991` / `10.1186` / `10.1057`）走直链模板
@@ -82,6 +104,8 @@ python3 -m venv .venv
 ## 维护
 
 学校改版后大概率要动的地方都在 `xjtlu.py` 顶部常量：`OPAC_BASE`、`ELINK`、`EBSCO_CUSTOMER`。OPAC 用校内自签证书，请求必须 `verify=False`。
+
+发布新版本：改 `bundle/package.json` 的 `version` → 提交并推送 → `python3 market/build_index.py`（把索引钉到当前 commit）→ 提交推送索引。
 
 ## License
 
