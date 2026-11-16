@@ -67,12 +67,12 @@
       },
       "versions": [
         {
-          "version": "0.1.1",
-          "publishTimestamp": 1794825244,
+          "version": "0.1.2",
+          "publishTimestamp": 1794827350,
           "source": {
             "type": "git",
             "url": "https://github.com/seally-web/xjtlu-library-mcp",
-            "commit": "9d839ade94641663aa4567e4939f62d0708e41d5",
+            "commit": "eb32845958da1077054de7e51c77f55643312db8",
             "path": "bundle"
           }
         }
