@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "XJTLU Library",
+    "description": "Connects the XJTLU library to the agent: search print books and e-books (with call numbers, copy counts, and per-copy locations), look up article metadata by DOI, and check entitlement or fetch an available PDF through the university elink proxy. Once enabled, seven tools appear under the xjtlu-library connection; just ask in the conversation — \"are these books on the shelf?\" or \"does the library subscribe to this paper?\" — no tool names needed. Requires uv (which provides uvx) on the machine; the first call fetches and installs the server from GitHub. Catalogue access is limited to the campus IP, so connect the XJTLU VPN when off campus. Single-article, on-demand only — no bulk crawling; Wiley, Taylor & Francis, Project Euclid, and ScienceDirect use bot protection, so scripts only get a 403 or a JS challenge page and you should open those in a browser. Session state and downloads stay local in ~/.xjtlu-library-mcp and are never uploaded. Disabling or removing this connector makes the tools disappear immediately; downloaded files stay.",
+    "detail": "docs/DETAIL.md"
+  }
+}

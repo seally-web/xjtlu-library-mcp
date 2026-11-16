@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "XJTLU 图书馆",
+    "description": "把西交利物浦大学图书馆接给 agent：检索馆藏纸本与电子书（含索书号、复本数、逐册馆藏地）、按 DOI 查论文元数据、经学校 elink 代理判断订阅并下载可得的 PDF。启用后 7 个工具挂在 xjtlu-library 连接下，在对话里直接说「查这几本书在馆状态」「这篇论文学校订了没」即可触发，不必记工具名。前置条件：本机需要 uv（提供 uvx 命令），首次调用会从 GitHub 拉取并安装本服务；馆藏接口只对校内 IP 或 VPN 开放，校外请先连 XJTLU VPN。只做单篇按需检索与下载，不做批量抓取；Wiley、Taylor & Francis、Project Euclid、ScienceDirect 有反爬风控，脚本只会拿到 403 或 JS 挑战页，需改用浏览器打开。登录态与下载文件只留在本机 ~/.xjtlu-library-mcp，不上传任何地方。删除或停用该连接器后这些工具立即消失，已下载的文件保留。",
+    "detail": "docs/DETAIL.zh.md"
+  }
+}

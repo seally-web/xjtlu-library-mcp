@@ -33,9 +33,14 @@ ELINK = "https://elink.xjtlu.edu.cn/go"
 EBSCO_CUSTOMER = "wwk3pd"
 
 HERE = Path(__file__).resolve().parent
-STATE_DIR = HERE / "state"
+
+# 运行时数据放固定的用户目录，而不是包目录：通过 uvx / pip 安装时包目录是临时缓存，
+# 升级即失效，登录态和已下载的 PDF 跟着一起没。用 XJTLU_LIBRARY_HOME 可覆盖。
+_data_home = os.environ.get("XJTLU_LIBRARY_HOME")
+DATA_HOME = Path(_data_home).expanduser() if _data_home else Path.home() / ".xjtlu-library-mcp"
+STATE_DIR = DATA_HOME / "state"
 COOKIE_FILE = STATE_DIR / "cookies.json"
-DOWNLOAD_DIR = HERE / "downloads"
+DOWNLOAD_DIR = DATA_HOME / "downloads"
 
 SEARCH_FIELDS = {
     "title": "题名",
