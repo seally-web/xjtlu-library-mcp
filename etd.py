@@ -160,6 +160,19 @@ def _guard(r: requests.Response) -> None:
 
 # ---------------------------------------------------------------- helpers
 
+def _json(r: requests.Response):
+    """解析响应；这个站用纯字符串表达拒绝（"非法请求"/"没有权限"），统一翻成 NotLoggedIn。"""
+    try:
+        data = r.json()
+    except ValueError:
+        raise NotLoggedIn(f"非 JSON 响应（HTTP {r.status_code}）：{(r.text or '')[:200]}")
+    if isinstance(data, str):
+        text = data[:300]
+        if "非法" in text or "登录" in text or "权限" in text:
+            raise NotLoggedIn(f"服务端拒绝：{text}")
+    return data
+
+
 def _strip(value) -> str:
     """搜索结果里的高亮是 <span style="color:red">…</span>，且全角空格是 &nbsp;。"""
     t = str(value or "")
@@ -187,7 +200,9 @@ def db_list() -> dict:
 def db_fields(db_code: str = DB_EXAM) -> dict:
     r = requests.get(f"{ETD_BASE}/api/v1/Search/{db_code}", headers={"User-Agent": UA}, timeout=30)
     r.raise_for_status()
-    d = r.json()
+    d = _json(r)
+    if not isinstance(d, dict):
+        return {"ok": False, "reason": "unexpected_response", "body": str(d)[:200]}
     return {
         "ok": bool(d.get("isSuccess")),
         "db_id": d.get("dbId"),
@@ -232,6 +247,12 @@ def exam_search(query: str = "", field: str = "PaperCode", page: int = 1,
         d = r.json()
     except ValueError:
         return {"ok": False, "reason": "bad_json", "body": (r.text or "")[:300]}
+    if not isinstance(d, dict):
+        # 这个站有时回纯字符串（"非法请求" / 未登录），别让 .get 崩掉整条链路
+        text = str(d)[:300]
+        if "非法" in text or "登录" in text:
+            raise NotLoggedIn(f"服务端拒绝：{text}")
+        return {"ok": False, "reason": "unexpected_response", "body": text}
 
     rows = ((d.get("result") or {}).get("overviewResult") or [])
     items = []
@@ -267,7 +288,8 @@ def exam_detail(record_id: int, db_code: str = DB_EXAM) -> dict:
     _guard(r)
     if r.status_code != 200:
         return {"ok": False, "reason": "http_error", "status": r.status_code}
-    d = (r.json() or {}).get("detailResult") or {}
+    raw = _json(r)
+    d = (raw.get("detailResult") if isinstance(raw, dict) else None) or {}
     rows = ((d.get("result") or {}).get("detailResult") or [])
     fields = {}
     if rows:
@@ -317,7 +339,7 @@ def exam_download(record_id: int, filename: str = "", db_code: str = DB_EXAM) ->
     try:
         r = s.get(f"{ETD_BASE}/api/v1/file/Download/{flag}", params=base, timeout=30)
         if r.status_code == 200:
-            urls = r.json()
+            urls = _json(r)
             if isinstance(urls, list) and urls:
                 name = str(urls[0]).rsplit(";", 1)[-1]
     except Exception:
@@ -329,7 +351,7 @@ def exam_download(record_id: int, filename: str = "", db_code: str = DB_EXAM) ->
     if r.status_code != 200:
         return {"ok": False, "reason": "browser_url_failed", "status": r.status_code,
                 "body": (r.text or "")[:200]}
-    urls = r.json()
+    urls = _json(r)
     if not isinstance(urls, list) or not urls:
         return {"ok": False, "reason": "no_browse_url", "body": str(urls)[:200]}
 
