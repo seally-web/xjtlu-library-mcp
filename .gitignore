@@ -19,3 +19,5 @@ dist/
 .scratch/
 # npm 临时缓存（沙箱内需要可写目录）
 .npmtmp/
+# uv 临时缓存
+.uvtmp/

@@ -139,6 +139,15 @@ def search_books(keyword: str, field: str = "title", page: int = 1, limit: int =
     r.encoding = "utf-8"
     if r.status_code != 200:
         return {"ok": False, "error": f"OPAC 返回 {r.status_code}", "hint": "校外请先连 VPN 或经 SSO 登录"}
+    # 校外时 OPAC 会被 trust.xjtlu.edu.cn 的 SSO 门户接管，返回登录页而不是结果列表
+    if "trust.xjtlu.edu.cn" in r.url or "search_book_list" not in r.text:
+        return {
+            "ok": False,
+            "reason": "login_required",
+            "network": network_scope(),
+            "hint": "馆藏检索只对校园网 IP 开放：连上 XJTLU VPN 后重试，"
+                    "或经 https://elink.xjtlu.edu.cn/go?url=https://opac.xjtlu.edu.cn/ 完成一次 SSO 登录。",
+        }
     items = parse_book_list(r.text)[:limit]
     total = None
     m = re.search(r"共\s*(\d+)\s*条", r.text)
@@ -222,6 +231,13 @@ def book_detail(marc_no: str) -> dict:
     r.encoding = "utf-8"
     if r.status_code != 200:
         return {"ok": False, "error": f"item.php 返回 {r.status_code}"}
+    if "trust.xjtlu.edu.cn" in r.url or "item_detail" not in r.text:
+        return {
+            "ok": False,
+            "reason": "login_required",
+            "network": network_scope(),
+            "hint": "详情页同样只对校园网开放：连上 XJTLU VPN 后重试。",
+        }
     soup = BeautifulSoup(r.text, "lxml")
     # 只取书目详情区，避免把页脚的“预约申请/图书评论/登录框”混进字段
     area = soup.select_one("div#bookdetail, div.bookdetail, table#item_detail, div#item_detail") or soup
