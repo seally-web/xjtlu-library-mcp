@@ -81,9 +81,22 @@ def main() -> None:
         ],
     }
 
-    out = ROOT / "market" / "index.json"
-    out.write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", "utf-8")
-    print(f"wrote {out} · {pkg['name']}@{version} · {commit[:12]}")
+    # 两个副本，各有用途：
+    #   market/index.json         —— 仓库里的，git source（给 GH tag / @main 那条老 URL）
+    #   bundle/market/index.json  —— 打进 npm 包，npm source；市场用
+    #                                https://cdn.jsdelivr.net/npm/<pkg>@latest/market/index.json
+    #                                读它，发一版就自动跟上，不用 purge、不依赖 github.com
+    git_index = json.loads(json.dumps(index))
+    out_repo = ROOT / "market" / "index.json"
+    out_repo.write_text(json.dumps(git_index, ensure_ascii=False, indent=2) + "\n", "utf-8")
+
+    npm_index = json.loads(json.dumps(index))
+    npm_index["plugins"][0]["versions"][0]["source"] = {"type": "npm"}
+    out_npm = BUNDLE / "market" / "index.json"
+    out_npm.parent.mkdir(parents=True, exist_ok=True)
+    out_npm.write_text(json.dumps(npm_index, ensure_ascii=False, indent=2) + "\n", "utf-8")
+
+    print(f"wrote {out_repo} ({SOURCE}) · {out_npm} (npm) · {pkg['name']}@{version} · {commit[:12]}")
 
 
 if __name__ == "__main__":

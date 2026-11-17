@@ -1,6 +1,6 @@
 {
   "name": "dsh-xjtlu-library",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "description": "XJTLU 图书馆连接器：让 agent 检索馆藏与论文、经学校代理判断订阅并取全文。",
   "exports": {
@@ -11,7 +11,8 @@
     "cordis.patch.yml",
     "locale/*.json",
     "docs",
-    "icon.svg"
+    "icon.svg",
+    "market"
   ],
   "dsh": {
     "bundle": {

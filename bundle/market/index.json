@@ -1,0 +1,79 @@
+{
+  "format": 1,
+  "title": {
+    "en": "XJTLU Library",
+    "zh": "XJTLU 图书馆"
+  },
+  "description": {
+    "en": "Plugins for searching the XJTLU library catalogue and its subscribed literature.",
+    "zh": "检索西交利物浦大学馆藏与订阅文献的插件。"
+  },
+  "metadata": {
+    "categories": {
+      "research": {
+        "title": {
+          "en": "Research",
+          "zh": "科研"
+        }
+      }
+    },
+    "labels": {
+      "mcp": {
+        "title": {
+          "en": "MCP",
+          "zh": "MCP"
+        }
+      },
+      "library": {
+        "title": {
+          "en": "Library",
+          "zh": "图书馆"
+        }
+      }
+    }
+  },
+  "plugins": [
+    {
+      "name": "dsh-xjtlu-library",
+      "title": {
+        "en": "XJTLU Library",
+        "zh": "XJTLU 图书馆"
+      },
+      "description": {
+        "en": "Search XJTLU print and e-book holdings, look up article metadata by DOI, and fetch available PDFs through the university's elink proxy. Requires uv and the campus network or VPN.",
+        "zh": "检索西浦馆藏纸本与电子书、按 DOI 查论文元数据、经学校 elink 代理取回可得的 PDF。需要本机装 uv，并处于校园网或已连 XJTLU VPN。"
+      },
+      "icon": "icon.svg",
+      "author": "seally-web",
+      "homepage": "https://github.com/seally-web/xjtlu-library-mcp#readme",
+      "repository": {
+        "url": "https://github.com/seally-web/xjtlu-library-mcp",
+        "directory": "bundle"
+      },
+      "metadata": {
+        "category": "research",
+        "keywords": [
+          "library",
+          "opac",
+          "xjtlu",
+          "mcp",
+          "文献",
+          "馆藏"
+        ],
+        "labels": [
+          "mcp",
+          "library"
+        ]
+      },
+      "versions": [
+        {
+          "version": "0.2.3",
+          "publishTimestamp": 1794927768,
+          "source": {
+            "type": "npm"
+          }
+        }
+      ]
+    }
+  ]
+}
