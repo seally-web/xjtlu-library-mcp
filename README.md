@@ -92,14 +92,19 @@ uvx --from git+https://github.com/seally-web/xjtlu-library-mcp xjtlu-library-mcp
 **设置 → 插件 → 实验性插件 → 打开「自定义插件索引」**，在 **Discover** 里添加索引地址：
 
 ```
-https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-v0.1.9/market/index.json
+https://cdn.jsdelivr.net/npm/dsh-xjtlu-library@latest/market/index.json
 ```
 
-> **为什么钉 tag 而不是 `@main`**：jsDelivr 对 `@main` 的缓存滞后且不稳定（实测发版后长时间仍返回 0.1.0，purge 多次也不生效）；对**不可变 ref**（tag / commit）则是首次拉取即为该版本，之后不会漂。
-> **为什么不用 raw**：`https://raw.githubusercontent.com/…/main/market/index.json` 仓库直出、立刻生效，但国内网络时通时断（同一小时内 200/1.2s 与 12s 超时都出现过）。
+索引文件**就在 npm 包里**（`bundle/market/index.json`），`@latest` 由 jsDelivr 的 npm 后端解析，所以：
+
+- 发一版 npm，索引自动跟上，**不需要手动 purge**
+- 不依赖 `github.com`（那个域名在国内时通时断，曾让安装连续失败三次）
+- 安装也走 npm（`dsh-xjtlu-library@X.Y.Z`），比 `git+` 快一个数量级
+
+> 早期版本用过 `…/gh/seally-web/xjtlu-library-mcp@index-vX.Y.Z/market/index.json`（钉 tag 的 GitHub 路径）。**钉 tag 的地址永远不会更新**——曾经因此让索引源停在 0.1.8 而无人察觉。那条路仍可用，但不推荐。
 > **不能用 `github.com/…/raw/…`**：它 302，而 DSH 拉索引时拒绝重定向。
->
-> 每次发版补打一个 `index-vX.Y.Z` tag 即可（见「维护」）。
+
+**装完之后不会自动升级。** DSH 把版本钉进 profile 依赖，索引里出现新版本只是「可安装」。要更新就重新装一次：先在插件列表里移除，再在 Discover 里装新版。
 
 然后搜「XJTLU 图书馆」安装。插件包见 [`bundle/`](bundle/)，它只做一件事：把本服务注册成一个名为 `xjtlu-library` 的 stdio MCP 连接。
 
@@ -232,11 +237,11 @@ v0.2.0 实测（同一台机器、校内网）：Springer 6.6s / ScienceDirect 6
 
 1. 改 `bundle/package.json` 的 `version`，并把 `bundle/cordis.patch.yml` 里 `uvx --from` 的 `@vX.Y.Z` 改成同一个 tag
 2. 提交 → `git tag -a vX.Y.Z -m ...` → 推送 main 和 tag
-3. `SOURCE=git python3 market/build_index.py` 把索引钉到该 commit → 提交推送
+3. `SOURCE=git python3 market/build_index.py` 同时生成两份索引：仓库的 `market/index.json`（git source）和 `bundle/market/index.json`（npm source，随包分发、`@latest` 指向它）→ 提交推送
 4. 同步打通 PyPI 之外的第二条分发路径——**预构建 wheel**（bundle 就是靠它启动的）：
    `./.venv/bin/python -m pip wheel . --no-deps -w dist` → 把 `dist/xjtlu_library_mcp-X.Y.Z-py3-none-any.whl` 一起提交
-5. 打索引 tag 并推送（索引地址靠它固定在某个版本上）：`git tag -a index-vX.Y.Z -m ...` → `git push origin index-vX.Y.Z`
-6. 新的索引地址是 `https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-vX.Y.Z/market/index.json`（把原地址里的版本号换掉）；bundle 里 wheel 的 `@vX.Y.Z` 也要一起改
+5. 打 tag 并推送：`git tag -a vX.Y.Z -m ...` → `git push origin main vX.Y.Z`（索引随 npm 走，**不需要**再打 index tag）
+6. `npm publish`（在 `bundle/` 里）→ 等 5–10 分钟让 tarball 落地 → 确认 `https://cdn.jsdelivr.net/npm/dsh-xjtlu-library@latest/market/index.json` 已显示新版本；bundle 里 wheel URL 的 `@vX.Y.Z` 也要一起改
 
 `@tag` 是必须的：`uvx --from git+…` 不带 ref 时会缓存已构建的工具环境，改了代码不生效。
 
