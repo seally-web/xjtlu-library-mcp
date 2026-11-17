@@ -395,12 +395,14 @@ def _download_via_navigation(cdp: _CDP, pdf_url: str, timeout: float,
 
     两条路径本质相同：都是浏览器顶层请求，能过 JS 挑战；页内 fetch 不能。
     """
+    started_at = time.time()
     dl = {"guid": None, "suggested": None}
-    try:
-        cdp.call("Browser.setDownloadBehavior", timeout=10, behavior="allowAndName",
-                 downloadPath=str(dest_dir), eventsEnabled=True)
-    except Exception:
-        pass
+    for domain in ("Browser", "Page"):
+        try:
+            cdp.call(f"{domain}.setDownloadBehavior", timeout=10, behavior="allowAndName",
+                     downloadPath=str(dest_dir), eventsEnabled=True)
+        except Exception:
+            pass
 
     interception = True
     try:
@@ -420,17 +422,25 @@ def _download_via_navigation(cdp: _CDP, pdf_url: str, timeout: float,
     deadline = time.time() + timeout
     saw_document = False
     last = {"ok": False, "reason": "timeout", "method": "navigate", "pdf_url": pdf_url}
+    last_probe = time.time()
     while time.time() < deadline:
-        got, msg = cdp._pump(deadline)
+        got, msg = cdp._pump(min(deadline, time.time() + 3))
         if not msg:
+            # 定期看一眼当前地址：被 302 回摘要页时不必再等满预算
+            if time.time() - last_probe >= 6:
+                last_probe = time.time()
+                st = _tab_state(cdp)
+                if re.search(r"article-abstract|/abstract|/doi/abs", st.get("url") or "", re.I):
+                    return {"ok": False, "reason": "no_entitlement", "method": "navigate",
+                            "landing_after_pdf": st.get("url"), "pdf_url": pdf_url}
             continue
         m = msg.get("method")
-        if m == "Browser.downloadWillBegin":
+        if m in ("Browser.downloadWillBegin", "Page.downloadWillBegin"):
             prm = msg.get("params", {})
             dl["guid"] = prm.get("guid")
             dl["suggested"] = prm.get("suggestedFilename")
             continue
-        if m == "Browser.downloadProgress":
+        if m in ("Browser.downloadProgress", "Page.downloadProgress"):
             prm = msg.get("params", {})
             state = prm.get("state")
             if state == "completed" and dl["guid"]:
@@ -477,6 +487,15 @@ def _download_via_navigation(cdp: _CDP, pdf_url: str, timeout: float,
                 pass
             continue
 
+        # 3xx 是跳转，不是响应内容：放行让它自己跳完，别把空 body 当成"文件是空的"。
+        # OUP / INFORMS 的 PDF 地址都会先 302 到别的域，真正的内容在下一跳。
+        if isinstance(status, int) and 300 <= status < 400:
+            try:
+                cdp.call("Fetch.continueRequest", timeout=5, requestId=rid)
+            except Exception:
+                pass
+            continue
+
         saw_document = True
         try:
             body = cdp.call("Fetch.getResponseBody", timeout=max(10, timeout), requestId=rid)
@@ -503,6 +522,27 @@ def _download_via_navigation(cdp: _CDP, pdf_url: str, timeout: float,
         except Exception:
             pass
         time.sleep(0.5)
+
+    # 兜底：不管事件有没有到，直接看目录里有没有新文件（.crdownload 未完成就再等）
+    if last.get("reason") in ("timeout", "empty_body", "not_pdf"):
+        try:
+            fresh = [f for f in Path(dest_dir).iterdir()
+                     if f.is_file() and f.stat().st_mtime >= started_at and f.suffix != ".crdownload"]
+            if fresh:
+                f = max(fresh, key=lambda x: x.stat().st_mtime)
+                if f.stat().st_size > 1024:
+                    name = _safe_name(filename) or f.name
+                    dest2 = Path(dest_dir) / name
+                    if dest2 != f:
+                        try:
+                            f.replace(dest2)
+                        except Exception:
+                            dest2 = f
+                    return {"ok": True, "path": str(dest2), "method": "download",
+                            "bytes": dest2.stat().st_size,
+                            "content_type": "application/pdf", "pdf_url": pdf_url}
+        except Exception:
+            pass
 
     if not saw_document and last.get("reason") == "timeout":
         last["detail"] = "导航后既没等到文档响应，也没触发下载（可能被重定向到登录/挑战页）"
@@ -655,6 +695,18 @@ def fetch_pdf(target: str, dest_dir: Path, filename: str = "",
                 }
 
             last_fail = nav
+
+            # (0) 被弹回摘要页 = 没有全文权限。OUP / INFORMS 的 PDF 地址会 302 到
+            #     `/article-abstract/...?redirectedFrom=PDF`，这种情况再等下去也没用。
+            st0 = _tab_state(cdp)
+            cur = (st0.get("url") or "")
+            if re.search(r"article-abstract|/abstract|/doi/abs/|/doi/abs\?|redirectedFrom=PDF", cur, re.I):
+                return {"ok": False, "reason": "no_entitlement", **pre, "pdf_url": pdf_url,
+                        "landing_after_pdf": cur,
+                        "attempts": attempts,
+                        "hint": "点进 PDF 又被弹回摘要页——学校没有这刊的全文权限，"
+                                "走文献传递（library@xjtlu.edu.cn，附 DOI）最快。",
+                        "reasons": REASONS.get("no_entitlement", "")}
 
             # (a) 页面已经在显示 PDF（ScienceDirect 的 pdf.sciencedirectassets.com）
             st = _tab_state(cdp)
