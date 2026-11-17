@@ -9,7 +9,7 @@
           - --from
           # 用预构建 wheel（单个 ~30KB 文件）而不是 git+ 源：git 源每次要 clone + 建构建环境，
           # 冷启动实测 100s 以上，曾把整个桌面端启动卡死在「Loading plugins…」。
-          - https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@v0.1.8/dist/xjtlu_library_mcp-0.1.8-py3-none-any.whl
+          - https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@v0.2.0/dist/xjtlu_library_mcp-0.2.0-py3-none-any.whl
           - xjtlu-library-mcp
         # 硬超时：即使 uvx 抽风 / 网络断了，也只让这条连接失败，绝不让启动无限期挂住。
         startupTimeoutMs: 30000

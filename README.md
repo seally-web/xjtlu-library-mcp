@@ -189,13 +189,38 @@ save_exam_session(cookie_string="XJTLU_UserInfo=nGUb...", token="O5mG...", user_
 - **下载分三档**，别期待一键全下：
   - ✅ 开放获取（arXiv / PMC / MDPI）直链可用 → `download_pdf`
   - ✅ Springer 系（`10.1007` / `10.2991` / `10.1186` / `10.1057`）走直链模板 → `download_pdf`
-  - ⚠️ Wiley / Taylor & Francis / Oxford Academic / Project Euclid / ScienceDirect 有反爬风控，
-    `requests` 拿到的是 403 或 JS 挑战页 —— 改用 `browser_download`
+  - ✅/⚠️ Wiley / Taylor & Francis / ScienceDirect / OUP 有反爬风控（Cloudflare、JS 挑战、签名 URL），
+    `requests` 一定拿 403 或挑战页 —— 用 `browser_download`，它走真浏览器，v0.2.0 起这四家实测都能下
 
-  `browser_download` 不复用任何"黑科技"：它开的就是 `browser_login` 那个 Chrome，
-  等页面加载完，读各出版社通用的 `<meta name="citation_pdf_url">` 标签（没有就找页面里的
-  `.pdf` 链接），再在**页面自己的上下文**里 `fetch(..., {credentials:'include'})` 把字节取回来。
-  对网站来说这就是你自己点了一下下载。所以要求只有一个：**在那个 Chrome 窗口里你确实能看这篇全文**。
+### `browser_download` 怎么做事的（v0.2.0 重写）
+
+旧做法是"页内 `fetch` 取 PDF"，这条路过不了 JS 挑战——ScienceDirect 的 `pdfft` 在 `fetch` 下永远回 51KB 挑战页。
+现在改成三条腿，按顺序试：
+
+1. **权限预检**（`probe_only=true` 可只跑到这一步）：打开落地页 1–4 秒内判断
+   `ok` / `bot_challenge` / `no_entitlement` / `not_found`。**没有全文就别下**，省掉 60 秒空等。
+2. **导航 + 拦截**：`Page.navigate` 到真正的 PDF 地址（顶层导航能过挑战），同时用
+   `Fetch.enable(requestStage=Response)` 把响应体截下来；如果站点直接触发下载
+   （`Content-Disposition: attachment`），改用 `Browser.setDownloadBehavior` 接住文件。
+3. **解壳**：有的站先回一个 HTML 外壳，真地址藏在里面（Wiley 是
+   `var src = "/doi/pdfdirect/…"`，ScienceDirect 是走到 `pdf.sciencedirectassets.com` 签名 URL）。
+   最多解 4 跳，也能识别"页面已经在显示 PDF"的情况并按当前 URL 重取。
+
+失败原因不再是含糊的 `not_pdf`，而是分开的：
+
+| reason | 意思 | 你该做什么 |
+|---|---|---|
+| `ok` | 拿到了 | — |
+| `bot_challenge` | 卡在 Cloudflare / JS 挑战 | 在浏览器窗口里手动打开这篇一次，再重试 |
+| `no_entitlement` | 页面有购买/登录入口，没有 PDF | 学校没订，走文献传递，别再试 |
+| `not_found` | DOI 不存在或页面 404 | 检查 DOI |
+| `timeout` | 挑战没在预算内过完 | 会自动重试一次；仍失败就手动开一次 |
+
+v0.2.0 实测（同一台机器、校内网）：Springer 6.6s / ScienceDirect 6.8s / arXiv 12.7s / Wiley 46s（挑战要等）。
+作为对照，旧版 Springer 46 秒超时、ScienceDirect 直接 403。
+
+> 要求只有一个：**在那个 Chrome 窗口里你确实能看这篇全文**。插件不破解任何付费墙。
+
 - **元数据来源**：文章检索主用 [OpenAlex](https://openalex.org)，不可用时自动回落 [Crossref](https://crossref.org)。两者都无需登录，也不碰 EBSCO 的私有前端接口——那接口无文档、随改版失效。
 - **馆藏接口**只允许校内 IP，所以本工具对校外同学的价值取决于你有无 VPN。
 

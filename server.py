@@ -212,17 +212,25 @@ def exam_download(record_id: int, filename: str = "", db_code: str = "EXAMXJTLU"
 
 
 @mcp.tool()
-def browser_download(url: str, filename: str = "") -> dict:
+def browser_download(url: str, filename: str = "", probe_only: bool = False) -> dict:
     """下载那些普通 HTTP 抓不动的 PDF（Wiley / Taylor & Francis / Oxford Academic /
     Project Euclid / ScienceDirect 这类有反爬风控的站）。
 
-    做法：复用 browser_login 的那个 Chrome —— 打开文献落地页，读标准标签
-    <meta name="citation_pdf_url">（没有就找页面里的 .pdf 链接），再在页面自己的
-    上下文里 fetch 回来。等价于你在那个页面上点一下"下载"，只是不用你手动点。
+    做法：复用 browser_login 的那个 Chrome —— 打开落地页、先判断有没有全文，
+    再让浏览器**导航**到 PDF（导航能过 JS 挑战，页内 fetch 不能），用 CDP Fetch 域
+    拦下响应体写盘；导航不行再退回页内 fetch。等价于你点一下"下载"。
 
-    需要登录态的先跑 browser_login。url 可以是文章页、doi.org 链接或 elink 代理链接。
+    返回的 reason 会明确区分三件事：
+      bot_challenge —— 被反爬挡住（先在浏览器窗口里手动打开一次这篇，再重试）
+      no_entitlement —— 学校没订这刊（别再试了，走文献传递）
+      not_found —— 链接/DOI 本身不对
+
+    probe_only=True 只做权限预检（3 秒出结论，不下载），适合先批量判断再决定下哪些。
+    需要登录态的先跑 browser_login。url 可以是文章页、doi.org 链接、elink 代理链接、
+    PDF 直链，或者裸 DOI（如 10.1007/s00039-016-0371-x）。
     """
-    return browser_fetch.fetch_pdf(url, xjtlu.DOWNLOAD_DIR, filename=filename)
+    return browser_fetch.fetch_pdf(url, xjtlu.DOWNLOAD_DIR, filename=filename,
+                                   probe_only=probe_only)
 
 
 def main() -> None:
