@@ -92,7 +92,7 @@ uvx --from git+https://github.com/seally-web/xjtlu-library-mcp xjtlu-library-mcp
 **设置 → 插件 → 实验性插件 → 打开「自定义插件索引」**，在 **Discover** 里添加索引地址：
 
 ```
-https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-v0.1.7/market/index.json
+https://cdn.jsdelivr.net/gh/seally-web/xjtlu-library-mcp@index-v0.1.8/market/index.json
 ```
 
 > **为什么钉 tag 而不是 `@main`**：jsDelivr 对 `@main` 的缓存滞后且不稳定（实测发版后长时间仍返回 0.1.0，purge 多次也不生效）；对**不可变 ref**（tag / commit）则是首次拉取即为该版本，之后不会漂。
