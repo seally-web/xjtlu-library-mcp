@@ -217,6 +217,26 @@ save_exam_session(cookie_string="XJTLU_UserInfo=nGUb...", token="O5mG...", user_
 
 npm 那条路（`SOURCE=npm`）也能用，但如果账号强制 2FA，`npm publish` 会走 staged publishing——先返回 `+ pkg@ver`，实际是 202 待审，要人工批准才真的发布。
 
+### 发 npm（实测流程，别被 `+ pkg@ver` 骗了）
+
+即使把账号 2FA 改成 `auth-only`，npm 现在仍对「能绕过 2FA 的 token」收紧限制，发布依旧走 staged。**看到 `+ dsh-xjtlu-library@X.Y.Z` 不等于发布成功**，务必用三条命令确认并批准：
+
+```bash
+cd bundle
+export npm_config_cache="$PWD/../.npmtmp/cache"   # 沙箱内 ~/.npm 不可写
+
+npm publish --registry=https://registry.npmjs.org/     # 会打印 202，版本进 stage
+npm stage list dsh-xjtlu-library --json --registry=https://registry.npmjs.org/
+npm stage approve <上一步返回的 id> --registry=https://registry.npmjs.org/
+```
+
+两个坑：
+
+- **`npm stage approve` 必须交互执行**，不能 `| tail`。一旦管道化，npm 拿不到 TTY，浏览器授权流程走不了，直接报 `EOTP`。
+- 授权后如果 `npm stage list` 还是空，说明手里的 token 权限不够（旧 token 是在 `auth-and-writes` 时期发的）；先 `npm login --auth-type=web` 换一个新 token。
+
+版本号不存在「0.1.7/0.1.8 了，下一个是 0.1.9」之外的跳跃：`0.1.8` 曾经发成一个 tarball 缺失的幽灵版本，所以补了一版 `0.1.9`，内容与 0.1.8 一致。
+
 ## License
 
 [MIT](LICENSE)。与西交利物浦大学官方无关，非官方项目。
